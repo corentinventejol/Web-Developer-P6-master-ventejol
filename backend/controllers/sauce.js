@@ -26,7 +26,7 @@ exports.createSauce = (req, res, next) => {
       res.status(400).json({ error });
     });
 };
-
+//verifie le update et le delete 
 exports.updateSauce = (req, res, next) => {
   const sauceObject = req.file
     ? {
@@ -52,12 +52,12 @@ exports.updateSauce = (req, res, next) => {
 
 exports.deleteSauce = (req, res, next) => {
   Sauce.findOne({ _id: req.params.id })
-    .then((sauce) => {
-      if (sauce.userId !== req.auth.userId) {
+    .then((sauces) => {
+      if (sauces.userId !== req.auth.userId) {
         return res.status(401).json({ message: 'Non autorisé' });
       }
 
-      const filename = sauce.imageUrl.split('/images/')[1];
+      const filename = sauces.imageUrl.split('images/')[1];
       fs.unlink(`images/${filename}`, () => {
         Sauce.deleteOne({ _id: req.params.id })
           .then(() => res.status(200).json({ message: 'Sauce supprimée !' }))
