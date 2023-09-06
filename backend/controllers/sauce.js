@@ -1,4 +1,6 @@
 const Sauce = require('../models/sauces');
+const fs = require('fs');
+
 
 exports.getSauce = (req, res, next) => {
   Sauce.findOne({ _id: req.params.id })
@@ -40,10 +42,23 @@ exports.updateSauce = (req, res, next) => {
       if (sauce.userId !== req.auth.userId) {
         return res.status(401).json({ message: 'Non autorisé' });
       }
+      
+      // Chemin vers l'ancienne image (si le dossier "images" est dans le même répertoire que votre script)
+      const oldImagePath = `images/${sauce.imageUrl.split('/images/')[1]}`;
 
-      Sauce.updateOne({ _id: req.params.id }, { ...sauceObject, _id: req.params.id })
-        .then(() => res.status(200).json({ message: 'Sauce modifiée !' }))
-        .catch((error) => res.status(400).json({ error }));
+
+
+      // Supprimer l'ancienne image
+      fs.unlink(oldImagePath, (err) => {
+        if (err) {
+          console.error('Erreur lors de la suppression de l\'ancienne image :', err);
+        }
+
+        // Mettre à jour la sauce avec la nouvelle image
+        Sauce.updateOne({ _id: req.params.id }, { ...sauceObject, _id: req.params.id })
+          .then(() => res.status(200).json({ message: 'Sauce modifiée !' }))
+          .catch((error) => res.status(400).json({ error }));
+      });
     })
     .catch((error) => {
       res.status(500).json({ error });
@@ -52,15 +67,23 @@ exports.updateSauce = (req, res, next) => {
 
 exports.deleteSauce = (req, res, next) => {
   Sauce.findOne({ _id: req.params.id })
-    .then((sauces) => {
-      if (sauces.userId !== req.auth.userId) {
+    .then((sauce) => {
+      if (sauce.userId !== req.auth.userId) {
         return res.status(401).json({ message: 'Non autorisé' });
       }
 
-      const filename = sauces.imageUrl.split('images/')[1];
-      fs.unlink(`images/${filename}`, () => {
+      const filename = sauce.imageUrl.split('/images/')[1];
+      const imagePath = `images/${filename}`;
+
+      // Supprimer l'image du dossier "images"
+      fs.unlink(imagePath, (err) => {
+        if (err) {
+          console.error('Erreur lors de la suppression de l\'image :', err);
+        }
+
+        // Supprimer la sauce de la base de données
         Sauce.deleteOne({ _id: req.params.id })
-          .then(() => res.status(200).json({ message: 'Sauce supprimée !' }))
+          .then(() => res.status(200).json({ message: 'Sauce et image supprimées !' }))
           .catch((error) => res.status(400).json({ error }));
       });
     })
