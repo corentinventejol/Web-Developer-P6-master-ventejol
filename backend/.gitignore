@@ -1,1 +1,6 @@
-images/
+images/*.jpg
+images/*.jpeg
+images/*.png
+images/*.gif
+images/*.bmp
+images/*.svg
