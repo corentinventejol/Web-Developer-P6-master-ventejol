@@ -4,3 +4,5 @@ images/*.png
 images/*.gif
 images/*.bmp
 images/*.svg
+
+.env

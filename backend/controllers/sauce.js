@@ -28,37 +28,41 @@ exports.createSauce = (req, res, next) => {
       res.status(400).json({ error });
     });
 };
-//verifie le update et le delete 
-exports.updateSauce = (req, res, next) => {
-  const sauceObject = req.file
-    ? {
-        ...JSON.parse(req.body.sauce),
-        imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`,
-      }
-    : { ...req.body };
 
-  Sauce.findOne({ _id: req.params.id })
+exports.updateSauce = (req, res, next) => {
+  const sauceId = req.params.id;
+
+  Sauce.findOne({ _id: sauceId })
     .then((sauce) => {
       if (sauce.userId !== req.auth.userId) {
-        return res.status(401).json({ message: 'Non autorisé' });
+        return res.status(403).json({ message: 'Non autorisé' });
       }
-      
-      // Chemin vers l'ancienne image (si le dossier "images" est dans le même répertoire que votre script)
-      const oldImagePath = `images/${sauce.imageUrl.split('/images/')[1]}`;
 
+      // Vérifier si une nouvelle image est téléchargée
+      if (req.file) {
+        // Chemin vers l'ancienne image (si le dossier "images" est dans le même répertoire que votre script)
+        const oldImagePath = `images/${sauce.imageUrl.split('/images/')[1]}`;
 
-
-      // Supprimer l'ancienne image
-      fs.unlink(oldImagePath, (err) => {
-        if (err) {
-          console.error('Erreur lors de la suppression de l\'ancienne image :', err);
-        }
+        // Supprimer l'ancienne image
+        fs.unlink(oldImagePath, (err) => {
+          if (err) {
+            console.error('Erreur lors de la suppression de l\'ancienne image :', err);
+          }
+        });
 
         // Mettre à jour la sauce avec la nouvelle image
-        Sauce.updateOne({ _id: req.params.id }, { ...sauceObject, _id: req.params.id })
-          .then(() => res.status(200).json({ message: 'Sauce modifiée !' }))
-          .catch((error) => res.status(400).json({ error }));
-      });
+        sauce.imageUrl = `${req.protocol}://${req.get('host')}/images/${req.file.filename}`;
+      }
+
+      // Mettre à jour les autres informations de la sauce
+      sauce.name = req.body.name;
+      sauce.description = req.body.description;
+      // Ajoutez ici d'autres champs que vous souhaitez mettre à jour
+
+      // Sauvegarder la sauce mise à jour
+      sauce.save()
+        .then(() => res.status(200).json({ message: 'Sauce modifiée !' }))
+        .catch((error) => res.status(400).json({ error }));
     })
     .catch((error) => {
       res.status(500).json({ error });
@@ -69,7 +73,7 @@ exports.deleteSauce = (req, res, next) => {
   Sauce.findOne({ _id: req.params.id })
     .then((sauce) => {
       if (sauce.userId !== req.auth.userId) {
-        return res.status(401).json({ message: 'Non autorisé' });
+        return res.status(403).json({ message: 'Non autorisé' });
       }
 
       const filename = sauce.imageUrl.split('/images/')[1];
