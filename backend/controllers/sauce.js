@@ -8,7 +8,8 @@ exports.getSauce = (req, res, next) => {
       res.status(200).json(sauce);
     })
     .catch((error) => {
-      res.status(404).json({ error });
+      res.status(404).json('Une erreur est survenue lors de la récupération des sauces.');
+      console.log('getSauce 1 : ', error );
     });
 };
 
