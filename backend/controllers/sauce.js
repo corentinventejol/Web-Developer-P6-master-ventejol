@@ -32,16 +32,18 @@ exports.createSauce = (req, res, next) => {
 
 exports.updateSauce = (req, res, next) => {
   const sauceId = req.params.id;
+  const sauceObject = { ...req.body };
 
-  Sauce.findOne({ _id: sauceId })
-    .then((sauce) => {
-      if (sauce.userId !== req.auth.userId) {
-        return res.status(403).json({ message: 'Non autorisé' });
-      }
+  // Vérifier si une nouvelle image est téléchargée
+  if (req.file) {
+    sauceObject.imageUrl = `${req.protocol}://${req.get('host')}/images/${req.file.filename}`;
+    // Récupérer le chemin de l'ancienne image
+    Sauce.findOne({ _id: sauceId })
+      .then((sauce) => {
+        if (sauce.userId !== req.auth.userId) {
+          return res.status(403).json({ message: 'Non autorisé' });
+        }
 
-      // Vérifier si une nouvelle image est téléchargée
-      if (req.file) {
-        // Chemin vers l'ancienne image (si le dossier "images" est dans le même répertoire que votre script)
         const oldImagePath = `images/${sauce.imageUrl.split('/images/')[1]}`;
 
         // Supprimer l'ancienne image
@@ -52,22 +54,19 @@ exports.updateSauce = (req, res, next) => {
         });
 
         // Mettre à jour la sauce avec la nouvelle image
-        sauce.imageUrl = `${req.protocol}://${req.get('host')}/images/${req.file.filename}`;
-      }
-
-      // Mettre à jour les autres informations de la sauce
-      sauce.name = req.body.name;
-      sauce.description = req.body.description;
-      // Ajoutez ici d'autres champs que vous souhaitez mettre à jour
-
-      // Sauvegarder la sauce mise à jour
-      sauce.save()
-        .then(() => res.status(200).json({ message: 'Sauce modifiée !' }))
-        .catch((error) => res.status(400).json({ error }));
-    })
-    .catch((error) => {
-      res.status(500).json({ error });
-    });
+        Sauce.updateOne({ _id: sauceId }, { ...sauceObject, _id: sauceId })
+          .then(() => res.status(200).json({ message: 'Sauce modifiée !' }))
+          .catch((error) => res.status(400).json({ error }));
+      })
+      .catch((error) => {
+        res.status(500).json({ error });
+      });
+  } else {
+    // Si aucune nouvelle image, mise à jour sans toucher à l'image
+    Sauce.updateOne({ _id: sauceId }, { ...sauceObject, _id: sauceId })
+      .then(() => res.status(200).json({ message: 'Sauce modifiée !' }))
+      .catch((error) => res.status(400).json({ error }));
+  }
 };
 
 exports.deleteSauce = (req, res, next) => {
